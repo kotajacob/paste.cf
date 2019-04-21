@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="./highlight/styles/atom-one-light.css">
+<script src="./highlight/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<title>paste.cf</title>
+<style>
+	body {
+		margin:40px auto;
+		max-width:650px;
+		line-height:1.6;
+		font-size:18px;
+		color:#444;
+		padding:0 10px;
+		font-family: Tahoma, Verdana, Arial, sans-serif;
+		background-color:#fafafa
+	}
+
+	h1,h2,h3 {
+		line-height:1.2;
+	}
+
+	code {
+		color:rgb(165, 42, 42);
+	}
+
+	a {
+		color:rgb(82, 157, 204);
+		text-decoration: none;
+	}
+
+	li {
+		margin:20px auto;
+	}
+</style>
+</head>
+<body>
+	<h1>Welcome to paste.cf</h1>
+	<p>
+	This is a public <a href="https://en.wikipedia.org/wiki/Pastebin">pastebin</a>
+	server. You may upload files up to 10MB in size and have them shared
+	publically. <a href="https://en.wikipedia.org/wiki/File_Transfer_Protocol">FTP</a>
+	is used to upload files to the server.
+	</p>
+	<p>
+	The very minimal code needed for this server is open sourced under the
+	3-Clause BSD License and can be found futher down on this page. The
+	full license can be found at <a href="./LICENSE.md">paste.cf/LICENSE.md</a>	
+	</p>
+
+	<h2>Why</h2>
+	<p>
+	I often paste things (code, text, logs, pics, gifs, etc) I want to
+	share with friends, forums, or irc online, but it feels like every time
+	I got used to a <a href="https://github.com/ptpb/pb/issues/246">pastebin</a>
+	or <a href="https://old.reddit.com/r/rant/comments/6jbyhp/photobucket_has_changed_their_tos_to_not_allow/">imagehosting</a>
+	site it went to shit within a year or two. So I figured I could spare a
+	few dollars a month on a vps to host my own paste server as that's the
+	only way you KNOW it will last.
+	</p>
+	<p>
+	Turns out all the paste server software out there I could find 
+	<a href="https://suckless.org/">sucked.</a> A paste server doesn't need 
+	js frameworks, big dynamic servers, node, ads, fluff, a web gui, fonts, 
+	complex slow clients, or any other bullshit people will invent in the 
+	coming years. FTP, an HTTP server, inotify, cron, and
+	2 &lt;100 line scripts is the most it should ever be.
+	</p>
+	<h2>Usage</h2>
+	<p>
+	Uploading to paste.cf is quite simple. Using your favourite FTP client
+	you can <code>ftp paste.cf</code> and <code>put file.whatever</code>
+	then run <code>sha1sum</code> on your file and the public address will
+	be <code>paste.cf/yoursha1.ext</code>
+	</p>
+	<p>
+	Your pastes will be deleted eventually. Storage space costs money; if
+	you need your files hosted forever read the section below and have your
+	own private server running very easily.
+	</p>
+
+	<h2>How</h2>
+	<p>
+	This server runs an FTP server configured to allow public uploads into
+	a specific directory. It also runs a simple static web server. That
+	public FTP directory is watched for linux inotify updates with <a href="http://inotify.aiken.cz/?section=incron&page=about&lang=en">incrond.</a>
+	Incrond is configured to run a python script (found below) when new
+	files are placed in the public FTP directory. The script only does a
+	few things. First it checks that the file is under 10Mb (the size can
+	be specified). Then it caculates the <a href="https://en.wikipedia.org/wiki/Sha1sum">sha1sum</a> 
+	of the file and renames + moves the file into the web server's public
+	directory (wherever you specify that to be).
+	</p>
+	<p>
+	Additionally the server uses <a href="https://en.wikipedia.org/wiki/Cron">cron</a> 
+	to run another script once every hour. This script checks if the disk usage is
+	above a certain percentage, if so it deletes uploaded files based on a
+	quadratic metric of their size and age. That script can also be found
+	below.
+	</p>
+	<p>
+	With basic computer knowledge you should be able to duplicate this
+	server for yourself (and even have your own private version if you'd
+	like). Below are basic setup instructions as well as the aforementioned
+	scripts.
+	</p>
+	<ol>
+		<li>
+			Install a reasonable server operating system. My favourites are <a href="https://alpinelinux.org/">alpine,</a> <a href="https://www.debian.org/">debian,</a> and <a href="https://www.archlinux.org/">arch.</a> Linux 2.6.13+ will make this much easier, but with some effort this can be setup on *BSD.
+		</li>
+		<li>
+			Install <a href="https://ftp.isc.org/isc/cron/">cron,</a> <a href="http://inotify.aiken.cz/?section=incron&page=about&lang=en">incron,</a> <a href="https://security.appspot.com/vsftpd.html">an ftp server</a> (or <a href="https://www.openssh.com/">sftp</a> for a private server), <a href="https://nginx.org/">a web server,</a> and <a href="https://www.python.org/">python 3.</a>
+		</li>
+		<li>
+			Optionally get a domain name to point to your server and use <a href="https://letsencrypt.org/">letsencrypt</a> to get a free https cert.
+		</li>
+		<li>
+			<a href="https://wiki.archlinux.org/index.php/Very_Secure_FTP_Daemon#Anonymous_login">Configure your ftp server to allow anonymous uploads.</a> Or use sftp and <a href="https://www.digitalocean.com/community/tutorials/how-to-set-up-ssh-keys-on-debian-9">setup a user plus keys</a> to make things easier for yourself. You probably wont need to do any web server configuration (other than maybe adding the ssl certs from above). You simply need to know which directory is being served. It is probably <code>/var/www/html/</code> or similar.
+		<li>
+			Create a user on your server to run the scripts. On debian <code>adduser --no-create-home paste</code> will do that.
+		</li>
+		<li>
+			Make sure incrond and crond are running on your system and enabled at startup. On debian they are enabled and running if you installed them with apt, you can verify with <code>systemctl status crond</code>, figure out how the init system on your operating system works and this should be pretty simple.
+		</li>
+		<li>
+			Add the <a href="./rename.py">rename.py</a> script to your system and make sure it's marked executable <code>chmod +x rename.py</code>. Do the same thing for remove.py.
+		</li>
+		<li>
+			Login as your paste user, <code>su paste</code>, then edit your incron tab with <code>incrontab -e</code> so that it says something like <code>/public/ftp/directory/here/ IN_CLOSE_WRITE,IN_MOVE_TO /path/to/rename.py --file $# --hold /public/ftp/directory --web /public/web/directory --max 10</code>. Read <code>incrontab(1)</code>, <code>incrontab(5)</code>, and <code>rename.py --help</code> for more info. If you we're unable to run <code>incrontab -e</code> you probably need to add your username to <code>/etc/incron.allow</code>
+		</li>
+		<li>
+			Now for <a href="./remove.py">remove.py</a>, edit the script so that the <code>web_dir</code> variable at the top points to the webdirectory with all the pictures. Then you can simply place the script in <code>/etc/cron.hourly/</code> if that doesn't exist on your system you'll need to also edit your cron tab to run that script once per hour.
+		</li>
+		<li>
+			Consider donating to one or more of the open source projects you used to build your paste server, without them much of the internet would not exist.
+		</li>
+	</ol>
+	<h3><a href="./rename.py">rename.py</a></h3>
+	<pre><code>
+#!/usr/bin/env python3
+# rename.py version 1.0
+# Copyright (C) 2019 Dakota Walsh
+
+import os	  # file operations
+import sys	  # system operations
+import argparse   # argument parsing
+import hashlib	  # calculate hash
+
+def tooBig(old_path, max_size):
+	# check is the file is over the max size
+	if (os.path.getsize(old_path) <= (max_size*1024*1024)):
+		return False
+	else:
+		return True
+
+def getHash(hold, f_name):
+	# return a hash of the file in question with the extension
+	root = ''
+	ext	 = ''
+	# however first we'll get the extension if there is one
+	if '.' in f_name:
+		root, ext = os.path.splitext(f_name)
+	f_path = os.path.join(hold, f_name)
+	# calculate the hash of the file
+	f_hash = hashlib.sha1(open(f_path,'rb').read()).hexdigest()
+	return(f_hash + ext)
+
+def getArgs():
+	# get the arguments with argparse
+	arg = argparse.ArgumentParser(description="rename.py")
+	arg.add_argument('--file', '-f', required=True, help='The file which incrond detected.')
+	arg.add_argument('--hold', '-d', required=True, help='The directory which was watched.')
+	arg.add_argument('--web', '-w', required=True, help='The web directory.')
+	arg.add_argument('--max', '-m', help='The max file size in MB. If no max size is set there will be no max size.')
+	return arg.parse_args()
+
+def checkDirs(hold, web):
+	# check that the directories exist
+	if not (os.path.isdir(hold)):
+		print ("ERROR: Hold Directory not found! Check your spelling and ensure the directory exists.")
+		sys.exit(1)
+	if not (os.path.isdir(web)):
+		print ("ERROR: Web Directory not found! Check your spelling and ensure the directory exists.")
+		sys.exit(1)
+
+def main():
+	# get the passed arguments
+	arguments = getArgs()
+	old_name  = arguments.file
+	hold	  = arguments.hold
+	web	  = arguments.web
+	old_path  = os.path.join(hold, old_name)
+
+	# make sure the hold and web directories exist
+	checkDirs(hold, web)
+
+	# check max size
+	if arguments.max:
+		max_size = int(arguments.max)
+		if tooBig(old_path, max_size):
+			os.remove(old_path)
+			sys.exit(0)
+
+	# calculate sum and rename file
+	new_name = getHash(hold, old_name) # can't use old_path due to ext check
+	new_path = os.path.join(web, new_name)
+	os.rename(old_path, new_path)
+
+if __name__ == '__main__':
+	main()
+	</pre></code>
+	<h3><a href="./remove.py">remove.py</a></h3>
+</body>
+</html>

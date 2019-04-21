@@ -1,0 +1,6 @@
+paste.cf was created by Dakota "kota" Walsh
+
+It wouldn't be possible without help from several open source projects such as
+linux, debian, nginx, vsftp, cron, incron, python, openssh, highlight.js, and
+far to many others to name. If you like paste.cf consider donating to any of
+the projects I just listed.
