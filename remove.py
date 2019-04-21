@@ -5,6 +5,10 @@
 import os  # file operations
 import sys # system operations
 
+def sorted_ls(path):
+	mtime = lambda f: os.stat(os.path.join(path, f)).st_mtime
+	return list(sorted(os.listdir(path), key=mtime))
+
 def main():
 	# public web directory with the images
 	web_dir = "/var/www/html/" # EDIT THIS FOR YOUR SERVER
@@ -19,9 +23,7 @@ def main():
 	if (used < max_disk_percent):
 		sys.exit(0)
 
-	# get a list of all the files
-	file_list = os.listdir(web_dir)
-	print(file_list)
+	print(sorted_ls(web_dir))
 
 if __name__ == '__main__':
 	main()
