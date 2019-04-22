@@ -74,12 +74,22 @@
 	you can <code>ftp paste.cf</code>, <code>cd incoming</code> (the
 	public upload directory), and <code>put file.whatever</code> then
 	run <code>sha1sum</code> on your file and the public address will be
-	<code>paste.cf/yoursha1.ext</code>
+	<code>paste.cf/yoursha1.extension</code>
 	</p>
 	<p>
 	Your pastes will be deleted eventually. Storage space costs money; if
 	you need your files hosted forever read the section below and have your
 	own private server running very easily.
+	</p>
+	<p>
+	To make uploading a bit quicker I wrote a tiny client that FTPs the file
+	to the server, calculates the hash, and prints what the resulting url
+	should be. Basically <code>pcf notes.md</code> will return the (soon to
+	be) live url. The you can download the client <a href="./pcf.py">here</a> or scroll further
+	down to read the code. Obviously you can combine <code>pcf</code> with
+	other programs to do cool stuff. Like take a screenshot, upload it, and
+	put the url in your clipboard. <code>scrot -q 100 /tmp/scrot.png && pcf
+	/tmp/scrot.png | xclip -in -selection c</code>
 	</p>
 
 	<h2>How</h2>
@@ -254,30 +264,93 @@ def main():
 if __name__ == '__main__':
 	main()
 	</pre></code>
+	<h3><a href="./pcf.py">pcf.py</a></h3>
+	<pre><code>
+#!/usr/bin/env python3
+# pcf.py version 1.0
+# Copyright (C) 2019 Dakota Walsh
 
+import os         # file operations
+import sys        # system operations
+import ftplib     # ftp operations
+import argparse   # argument parsing
+import hashlib    # calculate hash
+
+def getHash(f_name):
+	# return a hash of the file in question with the extension
+	root = ''
+	ext	 = ''
+	# however first we'll get the extension if there is one
+	if '.' in f_name:
+		root, ext = os.path.splitext(f_name)
+	# calculate the hash of the file
+	f_hash = hashlib.sha1(open(f_name,'rb').read()).hexdigest()
+	return(f_hash + ext)
+
+def checkFile(upload_file, max_file):
+	# check that the directories exist
+	if not (os.path.isfile(upload_file)):
+		print ("ERROR: File not found! Check your spelling and ensure the file exists.")
+		sys.exit(1)
+	if not (os.path.getsize(upload_file) <= (max_file)):
+		print ("ERROR: File too large. If this is a mistake, edit pcf.py to change max_file.")
+		sys.exit(1)
+
+def getArgs():
+	# get the arguments with argparse
+	arg = argparse.ArgumentParser(description="pcf.py")
+	arg.add_argument('file', metavar='F', help='The file which should be uploaded.')
+	return arg.parse_args()
+
+def main():
+	# get the passed arguments
+	arguments    = getArgs()
+	upload_file  = arguments.file
+	server_addr  = "paste.cf" # the server's address
+	server_pub   = "incoming" # public subdirectory on the server
+	max_file     = 10*1024*1024 # error if the file is over this size
+
+	# check that the file exists and is less than max_file
+	checkFile(upload_file, max_file)
+
+	# login to paste.cf and change into the public directory
+	ftp = ftplib.FTP(server_addr, "anonymous", "pcfclient")
+	ftp.cwd(server_pub)
+
+	# upload the file then close the connection
+	ftp.storbinary("STOR " + upload_file, open(upload_file, 'rb'))
+	ftp.quit()
+
+	# calculate the sha1sum and print the url
+	new_url = "https://" + server_addr + "/" + getHash(upload_file)
+	print(new_url)
+
+if __name__ == '__main__':
+	main()
+	</pre></code>
 	<h2>Privacy and Permanency</h2>
 	<p><b>
-		Do not upload anything which must remain private to paste.cf as
-		everything that is uploaded is public.
+	Do not upload anything which must remain private to paste.cf as
+	everything that is uploaded is public.
 	</b></p>
 	<p>
-		Additionally anything you upload may be removed at any time so do not
-		rely on paste.cf as your only copy of something important. The fact
-		that things can be removed does not guarantee their removal. In fact
-		virtually any uploaded file could be crawled and archived elseware.
+	Additionally anything you upload may be removed at any time so do not
+	rely on paste.cf as your only copy of something important. The fact
+	that things can be removed does not guarantee their removal. In fact
+	virtually any uploaded file could be crawled and archived elseware.
 	</p>
 	<p>
-		Finally it should be noted that the FTP server running on paste.cf is
-		configured to log IPs for each uploaded file. Meaning if illegal content
-		is uploaded and the authories send me a letter I'm handing them your
-		IP. I'm a broke ass college student and I'm simply not interested in
-		fighting your legal battles for you.
+	Finally it should be noted that the FTP server running on paste.cf is
+	configured to log IPs for each uploaded file. Meaning if illegal content
+	is uploaded and the authories send me a letter I'm handing them your
+	IP. I'm a broke ass college student and I'm simply not interested in
+	fighting your legal battles for you.
 	</p>
 	<p>
-		<b>You have been warned.</b> If you need to upload something private or
-		permanent follow the instructions above and setup your own paste server.
-		A server just like this one can be rented for $5 a month and give you
-		and your mates plenty of bandwidth and storage.
+	<b>You have been warned.</b> If you need to upload something private or
+	permanent follow the instructions above and setup your own paste server.
+	A server just like this one can be rented for $5 a month and give you
+	and your mates plenty of bandwidth and storage.
 	</p>
 </body>
 </html>
