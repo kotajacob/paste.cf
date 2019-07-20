@@ -20,7 +20,7 @@ def main():
 	web_dir = "/var/www/html/" # EDIT THIS FOR YOUR SERVER
 	max_disk_percent = 0.80 # Max disk usage percentage out of 1
 	# add any files in the dir which should be skipped to the ignore list
-	ignore = ["highlight", "humans.txt", "index.html", "LICENSE.md", "README.md", "pcf.py", "remove.py", "rename.py"]
+	ignore = ["humans.txt", "index.html", "LICENSE.md", "README.md", "pcf.py", "remove.py", "rename.py"]
 	# determine the current disk usage
 	stat  = os.statvfs(web_dir)
 	total = stat.f_blocks*stat.f_bsize
