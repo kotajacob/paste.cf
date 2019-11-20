@@ -63,17 +63,18 @@
 	share with friends, forums, or irc online, but it feels like every time
 	I got used to a <a href="https://github.com/ptpb/pb/issues/246">pastebin</a>
 	or <a href="https://old.reddit.com/r/rant/comments/6jbyhp/photobucket_has_changed_their_tos_to_not_allow/">imagehosting</a>
-	site it went to shit within a year or two. So I figured I could spare a
+	site it went down or had major issues within a year or two. So I figured I could spare a
 	few dollars a month on a vps to host my own paste server as that's the
 	only way you KNOW it will last.
 	</p>
 	<p>
 	Turns out all the paste server software out there I could find 
-	<a href="https://suckless.org/">sucked.</a> A paste server doesn't need 
-	js frameworks, big dynamic servers, node, ads, fluff, a web gui, fonts, 
-	complex slow clients, or any other bullshit people will invent in the 
-	coming years. FTP, an HTTP server, inotify, cron, and
-	2 &lt;100 line scripts is the most it should ever be.
+	<a href="https://suckless.org/">was very bloated.</a> A paste
+	server doesn't need frameworks, dynamic servers, ads, fluff, a web gui,
+	fonts, or complex slow clients. FTP, an HTTP server,
+	inotify, cron, and 2 &lt;100 line scripts is the most it should ever
+	be. That will ensure your paste server never requires more than a cheap 
+	$5 vps even with thousands of uploads per day.
 	</p>
 	<h2>Usage</h2>
 	<p>
@@ -96,7 +97,8 @@
 	down to read the code. Obviously you can combine <code>pcf</code> with
 	other programs to do cool stuff. Like take a screenshot, upload it, and
 	put the url in your clipboard. <code>scrot -q 85 scrot.png && pcf
-	scrot.png | xclip -in -selection c</code>
+	scrot.png | xclip -in -selection c</code> At some point I plan on 
+	creating a video showing off some usage of paste.cf.
 	</p>
 
 	<h2>How</h2>
